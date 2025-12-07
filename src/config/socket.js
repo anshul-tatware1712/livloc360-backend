@@ -1,5 +1,5 @@
 import { Server } from "socket.io";
-import LocationService from "../services/LocationService.js";
+import LocationService from "../services/locationService.js";
 
 let io;
 
