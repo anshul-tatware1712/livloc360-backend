@@ -64,6 +64,14 @@ const userSchema = new mongoose.Schema(
         ref: "Device",
       },
     ],
+    accessToken: {
+      type: String,
+      select: false,
+    },
+    refreshToken: {
+      type: String,
+      select: false,
+    },
   },
   {
     timestamps: true,

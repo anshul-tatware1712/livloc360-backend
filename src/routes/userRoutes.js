@@ -6,6 +6,8 @@ import {
   updateUserProfile,
   generateNewCredentials,
   deviceLogin,
+  refreshAuthToken,
+  logoutUser,
 } from "../controllers/userController.js";
 import { protect } from "../middleware/authMiddleware.js";
 
@@ -178,5 +180,51 @@ router
  *         description: User not found
  */
 router.route("/generate-credentials").post(protect, generateNewCredentials);
+
+/**
+ * @swagger
+ * /users/refresh-token:
+ *   post:
+ *     summary: Refresh authentication token
+ *     tags: [Users]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - refreshToken
+ *             properties:
+ *               refreshToken:
+ *                 type: string
+ *                 description: Valid refresh token
+ *     responses:
+ *       200:
+ *         description: New access token generated
+ *       401:
+ *         description: Invalid or expired refresh token
+ *       500:
+ *         description: Server error
+ */
+router.route("/refresh-token").post(refreshAuthToken);
+
+/**
+ * @swagger
+ * /users/logout:
+ *   post:
+ *     summary: Logout user and invalidate refresh token
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: User logged out successfully
+ *       401:
+ *         description: Not authorized
+ *       500:
+ *         description: Server error
+ */
+router.route("/logout").post(protect, logoutUser);
 
 export default router;

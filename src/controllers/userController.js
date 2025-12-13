@@ -1,5 +1,5 @@
 import asyncHandler from "express-async-handler";
-import { generateToken } from "../middleware/authMiddleware.js";
+import { generateToken, generateRefreshToken } from "../utils/tokenUtils.js";
 import UserService from "../services/UserService.js";
 import {
   registerValidation,
@@ -20,6 +20,11 @@ const registerUser = asyncHandler(async (req, res) => {
 
     const user = await UserService.registerUser(req.body);
 
+    // Generate refresh token and store it in the user document
+    const refreshToken = generateRefreshToken(user._id);
+    user.refreshToken = refreshToken;
+    await user.save();
+
     res.status(201).json({
       success: true,
       data: {
@@ -27,7 +32,8 @@ const registerUser = asyncHandler(async (req, res) => {
         firstName: user.firstName,
         lastName: user.lastName,
         email: user.email,
-        token: generateToken(user._id),
+        accessToken: generateToken(user._id),
+        refreshToken: refreshToken,
       },
     });
   } catch (error) {
@@ -60,6 +66,11 @@ const loginUser = asyncHandler(async (req, res) => {
       req.body.password
     );
 
+    // Generate refresh token and store it in the user document
+    const refreshToken = generateRefreshToken(user._id);
+    user.refreshToken = refreshToken;
+    await user.save();
+
     res.status(200).json({
       success: true,
       data: {
@@ -67,7 +78,8 @@ const loginUser = asyncHandler(async (req, res) => {
         firstName: user.firstName,
         lastName: user.lastName,
         email: user.email,
-        token: generateToken(user._id),
+        accessToken: generateToken(user._id),
+        refreshToken: refreshToken,
       },
     });
   } catch (error) {
@@ -194,6 +206,11 @@ const deviceLogin = asyncHandler(async (req, res) => {
       req.body.generatedPassword
     );
 
+    // Generate refresh token and store it in the user document
+    const refreshToken = generateRefreshToken(user._id);
+    user.refreshToken = refreshToken;
+    await user.save();
+
     res.status(200).json({
       success: true,
       data: {
@@ -202,12 +219,59 @@ const deviceLogin = asyncHandler(async (req, res) => {
         lastName: user.lastName,
         email: user.email,
         generatedId: user.generatedId,
+        token: generateToken(user._id),
+        refreshToken,
       },
     });
   } catch (error) {
     res.status(401).json({
       success: false,
       message: error.message || "Invalid credentials",
+    });
+  }
+});
+
+const refreshAuthToken = asyncHandler(async (req, res) => {
+  try {
+    const refreshToken = req.body.refreshToken;
+
+    const result = await UserService.refreshUserToken(refreshToken);
+
+    res.status(200).json({
+      success: true,
+      data: result,
+    });
+  } catch (error) {
+    if (
+      error.message === "Refresh token is required" ||
+      error.message === "Invalid refresh token" ||
+      error.message === "Invalid or expired refresh token"
+    ) {
+      return res.status(401).json({
+        success: false,
+        message: error.message,
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      message: error.message || "Server error during token refresh",
+    });
+  }
+});
+
+const logoutUser = asyncHandler(async (req, res) => {
+  try {
+    await UserService.clearRefreshToken(req.user._id);
+
+    res.status(200).json({
+      success: true,
+      message: "User logged out successfully",
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message || "Server error during logout",
     });
   }
 });
@@ -219,4 +283,6 @@ export {
   updateUserProfile,
   generateNewCredentials,
   deviceLogin,
+  refreshAuthToken,
+  logoutUser,
 };
